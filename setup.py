@@ -1,7 +1,7 @@
 import os
 from setuptools import setup, find_packages
 
-version = '0.0.2'
+version = '0.0.3'
 README = os.path.join(os.path.dirname(__file__), 'README.md')
 long_description = open(README).read()
 
@@ -28,9 +28,10 @@ setup(
     install_requires=[
 
     ],
-    extra_requires=[
-        'pytest'
-    ],
+    extras_require={
+        'test': ['pytest'],
+    },
+    python_requires='>=3.7',
     setup_requires=['setuptools>=41.2.0'],
     download_url='https://github.com/Um9i/wwu/archive/master.zip',
     packages=find_packages(),

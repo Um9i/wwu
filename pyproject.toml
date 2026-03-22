@@ -1,0 +1,32 @@
+[build-system]
+requires = ["setuptools>=41.2.0"]
+build-backend = "setuptools.backends._legacy:_Backend"
+
+[project]
+name = "wwu"
+version = "0.0.3"
+description = "Find the optimal way up to store your boxes."
+readme = "README.md"
+license = "MIT"
+requires-python = ">=3.7"
+authors = [
+    { name = "Rob Horton", email = "vulgarmessiah@gmail.com" },
+]
+keywords = ["boxes", "containers", "inventory", "permutation", "combinatorics"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Environment :: Console",
+    "Intended Audience :: End Users/Desktop",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: Utilities",
+    "Programming Language :: Python",
+]
+
+[project.urls]
+Homepage = "https://github.com/Um9i/wwu"
+Download = "https://github.com/Um9i/wwu/archive/master.zip"
+
+[project.optional-dependencies]
+test = ["pytest"]

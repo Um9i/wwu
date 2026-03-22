@@ -1,1 +1,1 @@
-from wwu.box import Box
+from wwu.box import Box as Box, Orientation as Orientation
