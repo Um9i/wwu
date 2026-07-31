@@ -10,6 +10,16 @@ WWU finds the optimal orientation for storing a box in a given storage space, ma
 
 No dependencies. No config. One function call.
 
+## Contents
+
+- [Permutation Index](#permutation-index)
+- [Examples](#examples)
+- [How It Works](#how-it-works)
+- [Limitations](#limitations)
+- [Installation](#installation)
+- [Requirements](#requirements)
+- [Contributing](#contributing)
+
 ## Permutation Index
 
 The returned index (0–5) maps to orientation as follows for a box with dimensions `(H, W, D)`:
@@ -56,14 +66,41 @@ Box(-1, 10, 20)       # ValueError: Box height must be positive
 b.wwu(10, 10, "ten")  # TypeError: Storage depth must be a number
 ```
 
+## How It Works
+
+For each of the 6 permutations of the box's `(height, width, depth)`, WWU computes
+how many boxes fit along each storage axis independently (`floor(storage_axis / box_axis)`)
+and multiplies them together to get a total box count for that orientation. It returns
+whichever permutation yields the highest count.
+
+## Limitations
+
+WWU answers "how many identical boxes fit, axis-aligned, in a grid?" — it is not a
+general bin-packing or mixed-carton solver. In particular:
+
+- All boxes are assumed to be the same size (one `Box` per call).
+- Boxes are placed on a uniform grid along each axis; it does not try irregular or
+  interlocking arrangements that could fit more boxes into leftover space.
+- Rotations are limited to the 6 axis-aligned permutations of height/width/depth —
+  no diagonal or off-axis placement.
+
 ## Installation
 
 ```
 pip install wwu
 ```
 
-## Tests
+## Requirements
+
+Python 3.9+. No runtime dependencies.
+
+## Contributing
 
 ```
-pytest
+git clone https://github.com/Um9i/wwu.git
+cd wwu
+pip install -e ".[test,lint]"
+
+pytest        # run tests
+ruff check .  # lint
 ```
