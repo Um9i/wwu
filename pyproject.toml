@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "wwu"
-version = "0.0.3"
+version = "0.0.4"
 description = "Find the optimal way up to store your boxes."
 readme = "README.md"
 license = "MIT"
