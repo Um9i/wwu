@@ -1,4 +1,8 @@
+from itertools import permutations
+from math import floor
+
 import pytest
+
 from wwu import Box, Orientation
 
 
@@ -41,6 +45,15 @@ class TestWwu:
     def test_repr_floats(self):
         b = Box(1.5, 2.5, 3.5)
         assert repr(b) == "Box(1.5, 2.5, 3.5)"
+
+    def test_tie_breaking_returns_first_max(self):
+        """When multiple orientations tie for the max count, the first one wins."""
+        b = Box(5, 5, 10)
+        height, width, depth = 10, 10, 10
+        perms = list(permutations(b.dimensions))
+        counts = [floor(height / p[0]) * floor(width / p[1]) * floor(depth / p[2]) for p in perms]
+        expected_idx = counts.index(max(counts))
+        assert b.wwu(height, width, depth) == expected_idx
 
 
 class TestBestOrientation:

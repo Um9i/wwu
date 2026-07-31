@@ -29,6 +29,14 @@ Download = "https://github.com/Um9i/wwu/archive/master.zip"
 
 [project.optional-dependencies]
 test = ["pytest"]
+lint = ["ruff"]
 
 [tool.setuptools.package-data]
 wwu = ["py.typed"]
+
+[tool.ruff]
+line-length = 110
+target-version = "py39"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]

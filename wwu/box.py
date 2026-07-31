@@ -1,5 +1,5 @@
 from itertools import permutations
-from math import floor, isnan, isinf
+from math import floor, isinf, isnan
 from typing import NamedTuple
 
 
