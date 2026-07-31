@@ -1,5 +1,5 @@
 from itertools import permutations
-from math import floor
+from math import floor, isnan, isinf
 from typing import NamedTuple
 
 
@@ -11,8 +11,10 @@ class Orientation(NamedTuple):
 
 def _validate_dimensions(height: object, width: object, depth: object, label: str = "Dimensions") -> None:
     for name, val in [("height", height), ("width", width), ("depth", depth)]:
-        if not isinstance(val, (int, float)):
+        if isinstance(val, bool) or not isinstance(val, (int, float)):
             raise TypeError(f"{label} {name} must be a number, got {type(val).__name__}")
+        if isnan(val) or isinf(val):
+            raise ValueError(f"{label} {name} must be finite, got {val}")
         if val <= 0:
             raise ValueError(f"{label} {name} must be positive, got {val}")
 
@@ -58,18 +60,7 @@ class Box:
                 storage dimension is zero or negative.
             TypeError: If any storage dimension is not a number.
         """
-        _validate_dimensions(height, width, depth, label="Storage")
-        perms: list[int] = []
-        for perm in permutations(self.dimensions):
-            # We want floored values here because boxes are solid objects.
-            perms.append(
-                floor(height / perm[0])
-                * floor(width / perm[1])
-                * floor(depth / perm[2])
-            )
-        if max(perms) > 0:
-            return perms.index(max(perms))
-        raise ValueError("Box will not fit in storage.")
+        return self.best_orientation(height, width, depth).perm_index
 
     def best_orientation(self, height: float, width: float, depth: float) -> Orientation:
         """Find the optimal orientation with full details.

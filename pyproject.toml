@@ -1,6 +1,6 @@
 [build-system]
 requires = ["setuptools>=41.2.0"]
-build-backend = "setuptools.backends._legacy:_Backend"
+build-backend = "setuptools.build_meta"
 
 [project]
 name = "wwu"
@@ -8,7 +8,7 @@ version = "0.0.3"
 description = "Find the optimal way up to store your boxes."
 readme = "README.md"
 license = "MIT"
-requires-python = ">=3.7"
+requires-python = ">=3.9"
 authors = [
     { name = "Rob Horton", email = "vulgarmessiah@gmail.com" },
 ]
@@ -17,7 +17,6 @@ classifiers = [
     "Development Status :: 3 - Alpha",
     "Environment :: Console",
     "Intended Audience :: End Users/Desktop",
-    "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
     "Topic :: Software Development :: Libraries :: Python Modules",
     "Topic :: Utilities",
@@ -30,3 +29,6 @@ Download = "https://github.com/Um9i/wwu/archive/master.zip"
 
 [project.optional-dependencies]
 test = ["pytest"]
+
+[tool.setuptools.package-data]
+wwu = ["py.typed"]
