@@ -1,5 +1,6 @@
+from fractions import Fraction
 from itertools import permutations
-from math import floor, isinf, isnan
+from math import isfinite, prod
 from typing import NamedTuple
 
 
@@ -13,10 +14,14 @@ def _validate_dimensions(height: object, width: object, depth: object, label: st
     for name, val in [("height", height), ("width", width), ("depth", depth)]:
         if isinstance(val, bool) or not isinstance(val, (int, float)):
             raise TypeError(f"{label} {name} must be a number, got {type(val).__name__}")
-        if isnan(val) or isinf(val):
+        if isinstance(val, float) and not isfinite(val):
             raise ValueError(f"{label} {name} must be finite, got {val}")
         if val <= 0:
             raise ValueError(f"{label} {name} must be positive, got {val}")
+
+
+def _measurement(value: float) -> Fraction:
+    return Fraction(str(value)) if isinstance(value, float) else Fraction(value)
 
 
 class Box:
@@ -81,16 +86,14 @@ class Box:
             TypeError: If any storage dimension is not a number.
         """
         _validate_dimensions(height, width, depth, label="Storage")
-        perms_list = list(permutations(self.dimensions))
-        counts: list[int] = []
-        for perm in perms_list:
-            counts.append(
-                floor(height / perm[0])
-                * floor(width / perm[1])
-                * floor(depth / perm[2])
-            )
-        best = max(counts)
-        if best > 0:
-            idx = counts.index(best)
-            return Orientation(perm_index=idx, dimensions=perms_list[idx], box_count=best)
+        storage = tuple(map(_measurement, (height, width, depth)))
+        carton = tuple(map(_measurement, self.dimensions))
+        best = None
+        for index, axes in enumerate(permutations(range(3))):
+            count = prod(space // carton[axis] for space, axis in zip(storage, axes))
+            if count and (best is None or count > best.box_count):
+                dimensions = tuple(self.dimensions[axis] for axis in axes)
+                best = Orientation(index, dimensions, count)
+        if best is not None:
+            return best
         raise ValueError("Box will not fit in storage.")

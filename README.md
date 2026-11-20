@@ -78,6 +78,11 @@ b.wwu(10, 10, "ten")  # TypeError: Storage depth must be a number
 
 ## How It Works
 
+Use the same unit for all six dimensions. WWU takes integers exactly and interprets
+each float as the decimal value shown by Python’s `str()`. For example, three
+`0.1` m cartons fit along a `0.3` m shelf. A computed dimension such as
+`0.1 + 0.2` is treated as `0.30000000000000004` m and exceeds that shelf.
+
 For each of the 6 permutations of the box's `(height, width, depth)`, WWU computes
 how many boxes fit along each storage axis independently (`floor(storage_axis / box_axis)`)
 and multiplies them together to get a total box count for that orientation. It returns

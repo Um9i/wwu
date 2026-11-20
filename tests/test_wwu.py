@@ -22,8 +22,7 @@ class TestWwu:
 
     def test_float_dimensions(self):
         b = Box(2.5, 3.5, 4.0)
-        result = b.wwu(10, 10, 10)
-        assert 0 <= result <= 5
+        assert b.best_orientation(10, 10, 10).box_count == 16
 
     def test_exact_fit(self):
         """Box dimensions exactly match storage — fits exactly 1."""
@@ -57,6 +56,22 @@ class TestWwu:
 
 
 class TestBestOrientation:
+    @pytest.mark.parametrize(("height", "side", "shelf"), [(1, 0.1, 0.3), (1000, 100, 300)])
+    def test_same_shelf_in_metres_and_millimetres(self, height, side, shelf):
+        result = Box(height, side, side).best_orientation(height, shelf, shelf)
+        assert result == Orientation(0, (height, side, side), 9)
+
+    def test_carton_just_too_large(self):
+        with pytest.raises(ValueError, match="will not fit"):
+            Box(1, 1, 0.30000000000000004).best_orientation(1, 1, 0.3)
+
+    def test_published_shelf_example(self):
+        assert Box(20, 30, 20).best_orientation(20, 100, 60) == Orientation(1, (20, 20, 30), 10)
+
+    def test_exact_large_integer_count(self):
+        capacity = 2**53 + 1
+        assert Box(1, 1, 1).best_orientation(1, 1, capacity).box_count == capacity
+
     def test_returns_orientation(self, box: Box) -> None:
         result = box.best_orientation(10, 10, 20)
         assert isinstance(result, Orientation)
