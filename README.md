@@ -8,7 +8,17 @@
 
 WWU finds the optimal orientation for storing a box in a given storage space, maximising how many fit. Just pass in your box size and storage dimensions, and WWU tells you which way to turn it.
 
-No dependencies. No config. One function call.
+On a shelf 100 cm wide and 60 cm deep, with 20 cm of clearance, a 30 × 20 × 20 cm carton fits three across and three deep. Turn every carton a quarter turn and five across by two deep gives **10 cartons instead of 9**.
+
+```python
+from wwu import Box
+
+carton = Box(20, 30, 20)  # height, width, depth in cm
+layout = carton.best_orientation(20, 100, 60)
+print(layout.box_count)  # 10
+```
+
+The calculation compares uniform layouts of identical boxes. Use the usable internal dimensions after allowing for clearance.
 
 ## Contents
 
