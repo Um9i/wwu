@@ -37,9 +37,10 @@ class Box:
     README). For the same storage, equal boxes choose the same orientation
     index and box count. The returned ``Orientation.dimensions`` keep each
     box's own values, so ``Box(10**23, 1, 1)`` reports the int ``10**23``
-    and the equal ``Box(1e23, 1, 1)`` reports the float ``1e23``. As with
-    dataclass equality, only boxes of exactly the same type are compared, so a
-    ``Box`` never equals an instance of a subclass.
+    and the equal ``Box(1e23, 1, 1)`` reports the float ``1e23``. Like
+    dataclass equality, ``Box.__eq__`` compares exact measurements only when
+    both operands have the same concrete type; otherwise it returns
+    ``NotImplemented`` and Python falls back to the other operand's ``__eq__``.
 
     Unpickling and copying validate the dimensions for ``Box`` and for subclasses
     that do not define their own ``__setstate__``. A dataclass subclass declared

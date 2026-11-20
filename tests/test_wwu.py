@@ -131,11 +131,22 @@ class TestWwu:
 
     @pytest.mark.parametrize("box", [Box(10, 10, 20), SKUBox(10, 10, 20, sku="A")], ids=["Box", "SKUBox"])
     def test_setstate_rejects_invalid_current_state(self, box):
-        """Box.__setstate__ validates current-format state and ignores a stale cache."""
+        """Box.__setstate__ validates current-format state."""
         rebuild, args, state = box.__reduce_ex__(2)[:3]
         state = {**state, "height": 0}  # _exact still holds the old, valid measurements
         with pytest.raises(ValueError, match="must be positive"):
             rebuild(*args).__setstate__(state)
+
+    @pytest.mark.parametrize("box", [Box(1, 2, 3), SKUBox(1, 2, 3, sku="A")], ids=["Box", "SKUBox"])
+    def test_setstate_rebuilds_stale_cache(self, box):
+        """A valid height of 2 with a cache built for height 1 counts like a fresh Box(2, 2, 3)."""
+        rebuild, args, state = box.__reduce_ex__(2)[:3]
+        restored = rebuild(*args)
+        restored.__setstate__({**state, "height": 2})  # _exact still holds height 1
+        expected = Box(2, 2, 3)
+        assert restored.best_orientation(4, 2, 3) == expected.best_orientation(4, 2, 3)
+        assert restored.best_orientation(4, 2, 3).box_count == 2
+        assert restored == type(box)(2, 2, 3, **({"sku": "A"} if isinstance(box, SKUBox) else {}))
 
     @LEGACY_PICKLES
     def test_unpickle_rejects_invalid_0_0_4_state(self, data):
