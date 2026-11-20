@@ -17,6 +17,18 @@ class SlotSKUBox(Box):
     sku: str = ""
 
 
+# pickle.dumps(Box(10, 10, 20), protocol=...) under wwu 0.0.4.
+LEGACY_PICKLES = pytest.mark.parametrize(
+    "data",
+    [
+        b"\x80\x02cwwu.box\nBox\nq\x00)\x81q\x01}q\x02X\n\x00\x00\x00dimensionsq\x03K\nK\nK\x14\x87q\x04sb.",
+        b"\x80\x05\x95/\x00\x00\x00\x00\x00\x00\x00\x8c\x07wwu.box\x94\x8c\x03Box\x94\x93\x94)\x81\x94}"
+        b"\x94\x8c\ndimensions\x94K\nK\nK\x14\x87\x94sb.",
+    ],
+    ids=["protocol-2", "protocol-5"],
+)
+
+
 class TestWwu:
     def test_wwu(self, box: Box) -> None:
         assert box.wwu(10, 10, 20) == 0
@@ -90,6 +102,17 @@ class TestWwu:
         assert Box(0.1, 1, 1) == Box(0.1, 1, 1)
         assert Box(1, 2, 3) != (1, 2, 3)
 
+    def test_box_and_subclass_are_never_equal(self):
+        """Equality stays transitive and hash-consistent when Box and a subclass mix."""
+        box, a, b = Box(1, 2, 3), SKUBox(1, 2, 3, sku="A"), SKUBox(1, 2, 3, sku="B")
+        assert box != a and a != box and box != b and a != b
+        assert a == SKUBox(1.0, 2, 3, sku="A")
+        stock = {box: "plain", a: "A"}
+        assert len(stock) == 2
+        assert stock[Box(1, 2, 3)] == "plain"
+        assert stock[SKUBox(1, 2, 3, sku="A")] == "A"
+        assert stock.get(b) is None
+
     @pytest.mark.parametrize("protocol", range(pickle.HIGHEST_PROTOCOL + 1))
     def test_pickle_round_trip(self, protocol):
         b = Box(0.1, 2, 3)
@@ -100,27 +123,26 @@ class TestWwu:
 
     @pytest.mark.parametrize("slots", [False, True])
     @pytest.mark.parametrize("clone", [copy.copy, copy.deepcopy, lambda b: pickle.loads(pickle.dumps(b))])
-    def test_subclass_fields_survive_copy_and_pickle(self, clone, slots):
+    def test_subclass_fields_survive_copy_and_pickle_round_trip(self, clone, slots):
         restored = clone((SlotSKUBox if slots else SKUBox)(1, 2, 0.1, sku="A-1"))
         assert restored.sku == "A-1"
         assert restored.dimensions == (1, 2, 0.1)
         assert restored.best_orientation(1, 2, 0.3).box_count == 3
 
-    def test_unpickle_rejects_invalid_legacy_state(self):
-        data = pickle.dumps(Box(10, 10, 20), protocol=2).replace(b"K\x14", b"K\x00")
+    @pytest.mark.parametrize("box", [Box(10, 10, 20), SKUBox(10, 10, 20, sku="A")], ids=["Box", "SKUBox"])
+    def test_setstate_rejects_invalid_current_state(self, box):
+        """Box.__setstate__ validates current-format state and ignores a stale cache."""
+        rebuild, args, state = box.__reduce_ex__(2)[:3]
+        state = {**state, "height": 0}  # _exact still holds the old, valid measurements
         with pytest.raises(ValueError, match="must be positive"):
-            pickle.loads(data)
+            rebuild(*args).__setstate__(state)
 
-    @pytest.mark.parametrize(
-        "data",
-        [
-            # pickle.dumps(Box(10, 10, 20), protocol=2) under wwu 0.0.4
-            b"\x80\x02cwwu.box\nBox\nq\x00)\x81q\x01}q\x02X\n\x00\x00\x00dimensionsq\x03K\nK\nK\x14\x87q\x04sb.",
-            # pickle.dumps(Box(10, 10, 20), protocol=5) under wwu 0.0.4
-            b"\x80\x05\x95/\x00\x00\x00\x00\x00\x00\x00\x8c\x07wwu.box\x94\x8c\x03Box\x94\x93\x94)\x81\x94}"
-            b"\x94\x8c\ndimensions\x94K\nK\nK\x14\x87\x94sb.",
-        ],
-    )
+    @LEGACY_PICKLES
+    def test_unpickle_rejects_invalid_0_0_4_state(self, data):
+        with pytest.raises(ValueError, match="must be positive"):
+            pickle.loads(data.replace(b"K\x14", b"K\x00"))  # depth 20 -> 0
+
+    @LEGACY_PICKLES
     def test_unpickle_0_0_4_box(self, data):
         b = pickle.loads(data)
         assert b == Box(10, 10, 20)

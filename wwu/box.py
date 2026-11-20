@@ -37,7 +37,14 @@ class Box:
     README). For the same storage, equal boxes choose the same orientation
     index and box count. The returned ``Orientation.dimensions`` keep each
     box's own values, so ``Box(10**23, 1, 1)`` reports the int ``10**23``
-    and the equal ``Box(1e23, 1, 1)`` reports the float ``1e23``.
+    and the equal ``Box(1e23, 1, 1)`` reports the float ``1e23``. As with
+    dataclass equality, only boxes of exactly the same type are compared, so a
+    ``Box`` never equals an instance of a subclass.
+
+    Unpickling and copying validate the dimensions for ``Box`` and for subclasses
+    that do not define their own ``__setstate__``. A dataclass subclass declared
+    with ``slots=True`` generates its own ``__setstate__``, which restores fields
+    without checking them.
 
     Args:
         height: The height of the box (must be positive).
@@ -62,7 +69,7 @@ class Box:
         return f"Box({self.height}, {self.width}, {self.depth})"
 
     def __eq__(self, other: object) -> bool:
-        if not isinstance(other, Box):
+        if type(other) is not type(self):
             return NotImplemented
         return self._exact == other._exact
 
