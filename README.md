@@ -49,10 +49,10 @@ The returned index (0–5) maps to orientation as follows for a box with dimensi
 from wwu import Box
 
 b = Box(10, 10, 20)  # Create a box with 10 x 10 x 20 dimensions.
-b.wwu(10, 10, 20)    # Find the optimal permutation in storage of 10 x 10 x 20
+b.wwu(10, 10, 20)  # Find the optimal permutation in storage of 10 x 10 x 20
 # >>> 0
 
-b.wwu(20, 10, 10)    # Different storage shape picks a different orientation
+b.wwu(20, 10, 10)  # Different storage shape picks a different orientation
 # >>> 4
 ```
 
@@ -66,13 +66,13 @@ b = Box(10, 10, 20)
 result = b.best_orientation(40, 20, 20)
 print(result.perm_index)  # Orientation index
 print(result.dimensions)  # The dimension ordering used
-print(result.box_count)   # Number of boxes that fit
+print(result.box_count)  # Number of boxes that fit
 ```
 
 Dimensions are validated — zero, negative, or non-numeric values raise an error:
 
 ```py
-Box(-1, 10, 20)       # ValueError: Box height must be positive
+Box(-1, 10, 20)  # ValueError: Box height must be positive
 b.wwu(10, 10, "ten")  # TypeError: Storage depth must be a number
 ```
 
@@ -107,7 +107,7 @@ pip install wwu
 
 ## Requirements
 
-Python 3.9+. No runtime dependencies.
+Python 3.11+. No runtime dependencies.
 
 ## Contributing
 

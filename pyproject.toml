@@ -1,14 +1,14 @@
 [build-system]
-requires = ["setuptools>=41.2.0"]
+requires = ["setuptools>=77"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "wwu"
-version = "0.0.4"
+version = "0.1.0"
 description = "Find the optimal way up to store your boxes."
 readme = "README.md"
 license = "MIT"
-requires-python = ">=3.9"
+requires-python = ">=3.11"
 authors = [
     { name = "Rob Horton", email = "vulgarmessiah@gmail.com" },
 ]
@@ -21,11 +21,18 @@ classifiers = [
     "Topic :: Software Development :: Libraries :: Python Modules",
     "Topic :: Utilities",
     "Programming Language :: Python",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Typing :: Typed",
 ]
 
 [project.urls]
 Homepage = "https://github.com/Um9i/wwu"
-Download = "https://github.com/Um9i/wwu/archive/master.zip"
+Download = "https://pypi.org/project/wwu/#files"
 
 [project.optional-dependencies]
 test = ["pytest"]
@@ -36,7 +43,7 @@ wwu = ["py.typed"]
 
 [tool.ruff]
 line-length = 110
-target-version = "py39"
+target-version = "py311"
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B"]
