@@ -34,7 +34,10 @@ class Box:
 
     Boxes are immutable. Two boxes are equal, and hash alike, when their
     dimensions have the same exact measurements (see "How It Works" in the
-    README), so equal boxes always give the same fit results.
+    README). For the same storage, equal boxes choose the same orientation
+    index and box count. The returned ``Orientation.dimensions`` keep each
+    box's own values, so ``Box(10**23, 1, 1)`` reports the int ``10**23``
+    and the equal ``Box(1e23, 1, 1)`` reports the float ``1e23``.
 
     Args:
         height: The height of the box (must be positive).
@@ -66,18 +69,18 @@ class Box:
     def __hash__(self) -> int:
         return hash(self._exact)
 
-    def __getstate__(self) -> dict[str, float]:
-        return {"height": self.height, "width": self.width, "depth": self.depth}
-
-    def __setstate__(self, state: dict[str, Any]) -> None:
+    def __setstate__(self, state: Any) -> None:
+        # The default pickle state is the instance dict, or (dict, slots) when a
+        # subclass adds __slots__. Restoring every entry keeps subclass fields.
+        state, slot_state = state if isinstance(state, tuple) else (state, None)
+        values = {**(state or {}), **(slot_state or {})}
         # wwu 0.0.x pickled a Box as {"dimensions": (height, width, depth)}.
-        if "dimensions" in state:
-            height, width, depth = state["dimensions"]
-        else:
-            height, width, depth = state["height"], state["width"], state["depth"]
-        for name, value in (("height", height), ("width", width), ("depth", depth)):
+        if "dimensions" in values:
+            values["height"], values["width"], values["depth"] = values.pop("dimensions")
+        values.pop("_exact", None)  # Recomputed below from the validated dimensions.
+        for name, value in values.items():
             object.__setattr__(self, name, value)
-        self.__post_init__()
+        Box.__post_init__(self)
 
     @property
     def dimensions(self) -> tuple[float, float, float]:

@@ -1,9 +1,20 @@
+import copy
 import dataclasses
 import pickle
 
 import pytest
 
 from wwu import Box, Orientation
+
+
+@dataclasses.dataclass(frozen=True)
+class SKUBox(Box):
+    sku: str = ""
+
+
+@dataclasses.dataclass(frozen=True, slots=True)
+class SlotSKUBox(Box):
+    sku: str = ""
 
 
 class TestWwu:
@@ -64,6 +75,15 @@ class TestWwu:
         with pytest.raises(ValueError, match="will not fit"):
             rounded.best_orientation(n, 1, 1)
 
+    def test_equal_boxes_choose_same_orientation(self):
+        """Equal boxes agree on index and count; dimensions keep each box's own values."""
+        a, b = Box(10**23, 1, 1), Box(1e23, 1, 1)
+        assert a == b
+        ra, rb = a.best_orientation(10**23, 1, 1), b.best_orientation(10**23, 1, 1)
+        assert (ra.perm_index, ra.box_count) == (rb.perm_index, rb.box_count) == (0, 1)
+        assert ra.dimensions == (10**23, 1, 1)
+        assert rb.dimensions == (1e23, 1, 1)
+
     def test_equality_uses_measurements(self):
         assert Box(1, 2, 3) == Box(1.0, 2.0, 3.0)
         assert hash(Box(1, 2, 3)) == hash(Box(1.0, 2.0, 3.0))
@@ -77,6 +97,19 @@ class TestWwu:
         assert restored == b
         assert restored.dimensions == (0.1, 2, 3)
         assert restored.best_orientation(0.3, 2, 3).box_count == 3
+
+    @pytest.mark.parametrize("slots", [False, True])
+    @pytest.mark.parametrize("clone", [copy.copy, copy.deepcopy, lambda b: pickle.loads(pickle.dumps(b))])
+    def test_subclass_fields_survive_copy_and_pickle(self, clone, slots):
+        restored = clone((SlotSKUBox if slots else SKUBox)(1, 2, 0.1, sku="A-1"))
+        assert restored.sku == "A-1"
+        assert restored.dimensions == (1, 2, 0.1)
+        assert restored.best_orientation(1, 2, 0.3).box_count == 3
+
+    def test_unpickle_rejects_invalid_legacy_state(self):
+        data = pickle.dumps(Box(10, 10, 20), protocol=2).replace(b"K\x14", b"K\x00")
+        with pytest.raises(ValueError, match="must be positive"):
+            pickle.loads(data)
 
     @pytest.mark.parametrize(
         "data",
