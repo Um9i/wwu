@@ -27,7 +27,7 @@ The calculation compares uniform layouts of identical boxes. Use the usable inte
 - [How It Works](#how-it-works)
 - [Limitations](#limitations)
 - [Installation](#installation)
-- [Requirements](#requirements)
+- [Upgrading from 0.0.4](#upgrading-from-004)
 - [Contributing](#contributing)
 
 ## Permutation Index
@@ -86,7 +86,9 @@ each float as the decimal value shown by Python’s `str()`. For example, three
 For each of the 6 permutations of the box's `(height, width, depth)`, WWU computes
 how many boxes fit along each storage axis independently (`floor(storage_axis / box_axis)`)
 and multiplies them together to get a total box count for that orientation. It returns
-whichever permutation yields the highest count.
+the lowest permutation index among the layouts with the highest count. If no
+orientation fits even one carton, both `wwu()` and `best_orientation()` raise
+`ValueError`.
 
 ## Limitations
 
@@ -101,13 +103,29 @@ general bin-packing or mixed-carton solver. In particular:
 
 ## Installation
 
+WWU 0.1.0 requires Python 3.11 or newer and has no runtime dependencies.
+
 ```
-pip install wwu
+python -m pip install wwu
 ```
 
-## Requirements
+## Upgrading from 0.0.4
 
-Python 3.11+. No runtime dependencies.
+Version 0.0.4 could undercount cartons when decimal measurements divided evenly.
+In 0.1.0, this shelf holds nine cartons in either unit:
+
+```python
+from wwu import Box
+
+assert Box(1, 0.1, 0.1).best_orientation(1, 0.3, 0.3).box_count == 9  # metres
+assert Box(1000, 100, 100).best_orientation(1000, 300, 300).box_count == 9  # millimetres
+```
+
+If you use Python 3.9 or 3.10, upgrade Python before installing WWU 0.1.0.
+`Box` instances are now immutable. Create a new box when a carton's dimensions
+change. Two plain boxes with the same exact height, width, and depth now compare
+equal and share a dictionary key. Existing `Box` instances saved with Python's
+`pickle` in 0.0.4 can still be loaded.
 
 ## Contributing
 
