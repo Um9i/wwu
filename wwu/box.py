@@ -1,44 +1,99 @@
+from dataclasses import dataclass, field
+from fractions import Fraction
 from itertools import permutations
-from math import floor, isinf, isnan
-from typing import NamedTuple
+from math import isfinite, prod
+from typing import Any, NamedTuple
+
+# Axis orders for the six orientations, in ``itertools.permutations`` order (indexes 0-5).
+_AXIS_ORDERS = tuple(permutations(range(3)))
 
 
 class Orientation(NamedTuple):
     perm_index: int
-    dimensions: tuple[float, ...]
+    dimensions: tuple[float, float, float]
     box_count: int
 
 
 def _validate_dimensions(height: object, width: object, depth: object, label: str = "Dimensions") -> None:
-    for name, val in [("height", height), ("width", width), ("depth", depth)]:
+    for name, val in (("height", height), ("width", width), ("depth", depth)):
         if isinstance(val, bool) or not isinstance(val, (int, float)):
             raise TypeError(f"{label} {name} must be a number, got {type(val).__name__}")
-        if isnan(val) or isinf(val):
+        if isinstance(val, float) and not isfinite(val):
             raise ValueError(f"{label} {name} must be finite, got {val}")
         if val <= 0:
             raise ValueError(f"{label} {name} must be positive, got {val}")
 
 
+def _measurement(value: int | float) -> Fraction:
+    return Fraction(str(value)) if isinstance(value, float) else Fraction(value)
+
+
+@dataclass(frozen=True, repr=False, eq=False)
 class Box:
-    """A box with height, width, and depth that can be oriented optimally for storage."""
+    """A box with height, width, and depth that can be oriented optimally for storage.
 
-    def __init__(self, height: float, width: float, depth: float):
-        """Create a box with the given dimensions.
+    Boxes are immutable. Two boxes are equal, and hash alike, when their
+    dimensions have the same exact measurements (see "How It Works" in the
+    README). For the same storage, equal boxes choose the same orientation
+    index and box count. The returned ``Orientation.dimensions`` keep each
+    box's own values, so ``Box(10**23, 1, 1)`` reports the int ``10**23``
+    and the equal ``Box(1e23, 1, 1)`` reports the float ``1e23``. Like
+    dataclass equality, ``Box.__eq__`` compares exact measurements only when
+    both operands have the same concrete type; otherwise it returns
+    ``NotImplemented`` and Python falls back to the other operand's ``__eq__``.
 
-        Args:
-            height: The height of the box (must be positive).
-            width: The width of the box (must be positive).
-            depth: The depth of the box (must be positive).
+    Unpickling and copying validate the dimensions for ``Box`` and for subclasses
+    that do not define their own ``__setstate__``. A dataclass subclass declared
+    with ``slots=True`` generates its own ``__setstate__``, which restores fields
+    without checking them.
 
-        Raises:
-            ValueError: If any dimension is zero or negative.
-            TypeError: If any dimension is not a number.
-        """
-        _validate_dimensions(height, width, depth, label="Box")
-        self.dimensions = (height, width, depth)
+    Args:
+        height: The height of the box (must be positive).
+        width: The width of the box (must be positive).
+        depth: The depth of the box (must be positive).
+
+    Raises:
+        ValueError: If any dimension is zero, negative, or not finite.
+        TypeError: If any dimension is not a number.
+    """
+
+    height: float
+    width: float
+    depth: float
+    _exact: tuple[Fraction, Fraction, Fraction] = field(init=False, repr=False)
+
+    def __post_init__(self) -> None:
+        _validate_dimensions(self.height, self.width, self.depth, label="Box")
+        object.__setattr__(self, "_exact", tuple(map(_measurement, self.dimensions)))
 
     def __repr__(self) -> str:
-        return f"Box({self.dimensions[0]}, {self.dimensions[1]}, {self.dimensions[2]})"
+        return f"Box({self.height}, {self.width}, {self.depth})"
+
+    def __eq__(self, other: object) -> bool:
+        if type(other) is not type(self):
+            return NotImplemented
+        return self._exact == other._exact
+
+    def __hash__(self) -> int:
+        return hash(self._exact)
+
+    def __setstate__(self, state: Any) -> None:
+        # The default pickle state is the instance dict, or (dict, slots) when a
+        # subclass adds __slots__. Restoring every entry keeps subclass fields.
+        state, slot_state = state if isinstance(state, tuple) else (state, None)
+        values = {**(state or {}), **(slot_state or {})}
+        # wwu 0.0.x pickled a Box as {"dimensions": (height, width, depth)}.
+        if "dimensions" in values:
+            values["height"], values["width"], values["depth"] = values.pop("dimensions")
+        values.pop("_exact", None)  # Recomputed below from the validated dimensions.
+        for name, value in values.items():
+            object.__setattr__(self, name, value)
+        Box.__post_init__(self)
+
+    @property
+    def dimensions(self) -> tuple[float, float, float]:
+        """The box's ``(height, width, depth)``."""
+        return (self.height, self.width, self.depth)
 
     def wwu(self, height: float, width: float, depth: float) -> int:
         """Find the optimal orientation index for storing this box.
@@ -66,7 +121,8 @@ class Box:
         """Find the optimal orientation with full details.
 
         Like ``wwu()``, but returns a named tuple with the orientation index,
-        the resulting dimension ordering, and how many boxes fit.
+        the resulting dimension ordering, and how many boxes fit. When several
+        orientations fit the same number of boxes, the lowest index wins.
 
         Args:
             height: Storage space height (must be positive).
@@ -81,16 +137,14 @@ class Box:
             TypeError: If any storage dimension is not a number.
         """
         _validate_dimensions(height, width, depth, label="Storage")
-        perms_list = list(permutations(self.dimensions))
-        counts: list[int] = []
-        for perm in perms_list:
-            counts.append(
-                floor(height / perm[0])
-                * floor(width / perm[1])
-                * floor(depth / perm[2])
-            )
-        best = max(counts)
-        if best > 0:
-            idx = counts.index(best)
-            return Orientation(perm_index=idx, dimensions=perms_list[idx], box_count=best)
-        raise ValueError("Box will not fit in storage.")
+        dimensions = self.dimensions
+        storage = tuple(map(_measurement, (height, width, depth)))
+        carton = self._exact
+        counts = [
+            prod(space // carton[axis] for space, axis in zip(storage, axes, strict=True))
+            for axes in _AXIS_ORDERS
+        ]
+        best = max(range(len(counts)), key=counts.__getitem__)  # first index wins ties
+        if not counts[best]:
+            raise ValueError("Box will not fit in storage.")
+        return Orientation(best, tuple(dimensions[axis] for axis in _AXIS_ORDERS[best]), counts[best])

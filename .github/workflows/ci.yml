@@ -11,11 +11,11 @@ permissions:
 
 jobs:
   test:
-    # setup-python provides Python 3.9 binaries on this runner.
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-latest
     strategy:
+      fail-fast: false
       matrix:
-        python-version: ["3.9", "3.10", "3.11", "3.12", "3.13"]
+        python-version: ["3.11", "3.12", "3.13", "3.14", "3.15"]
     steps:
       - uses: actions/checkout@v7
 
@@ -23,6 +23,7 @@ jobs:
         uses: actions/setup-python@v7
         with:
           python-version: ${{ matrix.python-version }}
+          allow-prereleases: true
 
       - name: Install package with test dependencies
         run: pip install -e ".[test]"
@@ -46,6 +47,9 @@ jobs:
       - name: Run ruff
         run: ruff check .
 
+      - name: Check formatting
+        run: ruff format --check .
+
   build:
     runs-on: ubuntu-latest
     steps:
@@ -64,3 +68,11 @@ jobs:
 
       - name: Check distribution metadata
         run: twine check dist/*
+
+      - name: Run tests from the sdist
+        run: |
+          mkdir sdist-check
+          tar -xzf dist/*.tar.gz -C sdist-check --strip-components=1
+          python -m venv sdist-check/.venv
+          sdist-check/.venv/bin/pip install dist/*.whl pytest
+          cd sdist-check && .venv/bin/python -I -m pytest -q tests
