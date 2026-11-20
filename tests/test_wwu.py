@@ -1,4 +1,5 @@
 import dataclasses
+import pickle
 
 import pytest
 
@@ -53,6 +54,45 @@ class TestWwu:
         assert Box(1, 2, 3) == Box(1, 2, 3)
         assert Box(1, 2, 3) != Box(3, 2, 1)
         assert len({Box(1, 2, 3), Box(1, 2, 3)}) == 1
+
+    def test_equal_boxes_give_equal_results(self):
+        """int(1e23) and 1e23 are equal Python numbers but different measurements."""
+        n = int(1e23)
+        exact, rounded = Box(n, 1, 1), Box(1e23, 1, 1)
+        assert exact != rounded
+        assert exact.best_orientation(n, 1, 1).box_count == 1
+        with pytest.raises(ValueError, match="will not fit"):
+            rounded.best_orientation(n, 1, 1)
+
+    def test_equality_uses_measurements(self):
+        assert Box(1, 2, 3) == Box(1.0, 2.0, 3.0)
+        assert hash(Box(1, 2, 3)) == hash(Box(1.0, 2.0, 3.0))
+        assert Box(0.1, 1, 1) == Box(0.1, 1, 1)
+        assert Box(1, 2, 3) != (1, 2, 3)
+
+    @pytest.mark.parametrize("protocol", range(pickle.HIGHEST_PROTOCOL + 1))
+    def test_pickle_round_trip(self, protocol):
+        b = Box(0.1, 2, 3)
+        restored = pickle.loads(pickle.dumps(b, protocol=protocol))
+        assert restored == b
+        assert restored.dimensions == (0.1, 2, 3)
+        assert restored.best_orientation(0.3, 2, 3).box_count == 3
+
+    @pytest.mark.parametrize(
+        "data",
+        [
+            # pickle.dumps(Box(10, 10, 20), protocol=2) under wwu 0.0.4
+            b"\x80\x02cwwu.box\nBox\nq\x00)\x81q\x01}q\x02X\n\x00\x00\x00dimensionsq\x03K\nK\nK\x14\x87q\x04sb.",
+            # pickle.dumps(Box(10, 10, 20), protocol=5) under wwu 0.0.4
+            b"\x80\x05\x95/\x00\x00\x00\x00\x00\x00\x00\x8c\x07wwu.box\x94\x8c\x03Box\x94\x93\x94)\x81\x94}"
+            b"\x94\x8c\ndimensions\x94K\nK\nK\x14\x87\x94sb.",
+        ],
+    )
+    def test_unpickle_0_0_4_box(self, data):
+        b = pickle.loads(data)
+        assert b == Box(10, 10, 20)
+        assert b.dimensions == (10, 10, 20)
+        assert b.wwu(20, 10, 10) == 4
 
     def test_immutable(self):
         b = Box(1, 2, 3)

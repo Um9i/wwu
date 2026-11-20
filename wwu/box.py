@@ -1,8 +1,8 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from fractions import Fraction
 from itertools import permutations
 from math import isfinite, prod
-from typing import NamedTuple
+from typing import Any, NamedTuple
 
 # Axis orders for the six orientations, in ``itertools.permutations`` order (indexes 0-5).
 _AXIS_ORDERS = tuple(permutations(range(3)))
@@ -28,11 +28,13 @@ def _measurement(value: int | float) -> Fraction:
     return Fraction(str(value)) if isinstance(value, float) else Fraction(value)
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class Box:
     """A box with height, width, and depth that can be oriented optimally for storage.
 
-    Boxes are immutable and compare equal when their dimensions are equal.
+    Boxes are immutable. Two boxes are equal, and hash alike, when their
+    dimensions have the same exact measurements (see "How It Works" in the
+    README), so equal boxes always give the same fit results.
 
     Args:
         height: The height of the box (must be positive).
@@ -47,12 +49,35 @@ class Box:
     height: float
     width: float
     depth: float
+    _exact: tuple[Fraction, Fraction, Fraction] = field(init=False, repr=False)
 
     def __post_init__(self) -> None:
         _validate_dimensions(self.height, self.width, self.depth, label="Box")
+        object.__setattr__(self, "_exact", tuple(map(_measurement, self.dimensions)))
 
     def __repr__(self) -> str:
         return f"Box({self.height}, {self.width}, {self.depth})"
+
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, Box):
+            return NotImplemented
+        return self._exact == other._exact
+
+    def __hash__(self) -> int:
+        return hash(self._exact)
+
+    def __getstate__(self) -> dict[str, float]:
+        return {"height": self.height, "width": self.width, "depth": self.depth}
+
+    def __setstate__(self, state: dict[str, Any]) -> None:
+        # wwu 0.0.x pickled a Box as {"dimensions": (height, width, depth)}.
+        if "dimensions" in state:
+            height, width, depth = state["dimensions"]
+        else:
+            height, width, depth = state["height"], state["width"], state["depth"]
+        for name, value in (("height", height), ("width", width), ("depth", depth)):
+            object.__setattr__(self, name, value)
+        self.__post_init__()
 
     @property
     def dimensions(self) -> tuple[float, float, float]:
@@ -103,7 +128,7 @@ class Box:
         _validate_dimensions(height, width, depth, label="Storage")
         dimensions = self.dimensions
         storage = tuple(map(_measurement, (height, width, depth)))
-        carton = tuple(map(_measurement, dimensions))
+        carton = self._exact
         counts = [
             prod(space // carton[axis] for space, axis in zip(storage, axes, strict=True))
             for axes in _AXIS_ORDERS

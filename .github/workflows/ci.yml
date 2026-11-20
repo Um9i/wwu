@@ -68,3 +68,11 @@ jobs:
 
       - name: Check distribution metadata
         run: twine check dist/*
+
+      - name: Run tests from the sdist
+        run: |
+          mkdir sdist-check
+          tar -xzf dist/*.tar.gz -C sdist-check --strip-components=1
+          python -m venv sdist-check/.venv
+          sdist-check/.venv/bin/pip install dist/*.whl pytest
+          cd sdist-check && .venv/bin/python -I -m pytest -q tests
