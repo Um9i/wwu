@@ -1,7 +1,7 @@
 # WWU
 
 [![CI](https://github.com/Um9i/wwu/actions/workflows/ci.yml/badge.svg)](https://github.com/Um9i/wwu/actions/workflows/ci.yml)
-[![PyPI](https://img.shields.io/pypi/v/wwu.svg)](https://pypi.org/project/wwu/)
+[![WWU version on PyPI](https://img.shields.io/pypi/v/wwu.svg?label=PyPI)](https://pypi.org/project/wwu/)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
 **Which Way Up?** — Pack more boxes into less space.
