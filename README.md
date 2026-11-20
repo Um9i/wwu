@@ -15,6 +15,7 @@ from wwu import Box
 
 carton = Box(20, 30, 20)  # height, width, depth in cm
 layout = carton.best_orientation(20, 100, 60)
+print(layout.dimensions)  # (20, 20, 30): 20 cm high, 20 cm across, 30 cm deep
 print(layout.box_count)  # 10
 ```
 
